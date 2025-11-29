@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Student Course Selection & Scheduling System</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#f7fafc;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --accent1:#7c3aed; --accent2:#ef4444; --accent3:#0ea5e9; --accent4:#f59e0b; --accent5:#10b981; --accent6:#ec4899;
+    }
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;background:var(--bg);color:#111;}
+    .center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px;}
+    .container{width:100%;max-width:1100px;}
+    .two-col{display:flex;gap:20px;}
+    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(16,24,40,0.06);}
+    h1,h2{margin:0 0 8px 0;}
+    p{margin:0 0 10px 0;color:var(--muted);font-size:14px;}
+
+    /* colourful animated border */
+    .glow-wrap{padding:4px;border-radius:16px;
+      background:linear-gradient(90deg,var(--accent1),var(--accent2),var(--accent3),var(--accent4),var(--accent5),var(--accent6));
+      background-size:300% 300%;
+      animation:glow 8s ease-in-out infinite;
+    }
+    @keyframes glow{
+      0%{background-position:0% 50%;}
+      50%{background-position:100% 50%;}
+      100%{background-position:0% 50%;}
+    }
+    .login-card{border-radius:12px;padding:18px;background:#fff;}
+
+    label{display:block;font-size:13px;color:#374151;margin-bottom:6px;}
+    input[type="email"],input[type="password"]{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9ef;font-size:14px;}
+    button{cursor:pointer;border:0;padding:10px 14px;border-radius:8px;font-weight:600;}
+    .btn-primary{background:#4f46e5;color:#fff;}
+    .btn-ghost{background:transparent;border:1px solid #e6e9ef;color:#374151;}
+
+    /* course list */
+    .course-list{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;}
+    .course-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;border:1px solid #f3f4f6;}
+    .course-meta{font-size:14px;}
+    .small{font-size:12px;color:var(--muted);margin-top:4px;}
+
+    /* schedule preview */
+    .schedule-wrap{background:#fff;border-radius:12px;padding:12px;overflow:hidden;}
+    .schedule-grid{display:grid;grid-template-columns:70px repeat(5,1fr);gap:6px;align-items:start;}
+    .time-cell{font-size:12px;color:var(--muted);padding-top:8px;text-align:right;padding-right:8px;}
+    .day-header{text-align:center;font-weight:600;font-size:13px;color:#111;padding:6px 0;}
+    .grid-area{position:relative;border-radius:8px;border:1px solid #f3f4f6;height:520px;overflow:hidden;background:#fff;}
+    .hour-line{position:absolute;left:0;right:0;height:1px;background:#f3f4f6;}
+    .day-column{position:relative;border-left:1px solid #f3f4f6;height:100%;}
+    .course-block{position:absolute;left:8px;right:8px;border-radius:8px;padding:8px;color:#fff;font-size:12px;box-shadow:0 6px 14px rgba(2,6,23,0.08);}
+
+    /* responsive */
+    @media (max-width:900px){
+      .two-col{flex-direction:column;}
+      .schedule-wrap{order:2;}
+    }
+
+    .status-ok{color:#059669;font-weight:700;}
+    .status-bad{color:#dc2626;font-weight:700;}
+
+    .legend{font-size:13px;color:var(--muted);margin-left:auto;display:flex;gap:10px;align-items:center;}
+    .legend .swatch{width:14px;height:14px;border-radius:4px;display:inline-block;}
+
+    .toolbar{display:flex;gap:8px;align-items:center;margin-top:12px;}
+    .small-muted{font-size:13px;color:var(--muted);}
+
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div class="container">
+
+      <!-- LOGIN PAGE -->
+      <div id="page-login">
+        <div class="two-col">
+          <div style="flex:1;">
+            <div class="glow-wrap">
+              <div class="login-card card">
+                <h1>Student Portal — Login</h1>
+                <p>Enter your college email to continue. This demo uses a simple client-side login (no backend).</p>
+
+                <form id="loginForm" onsubmit="return handleLogin(event)">
+                  <label for="email">Email</label>
+                  <input id="email" type="email" placeholder="you@college.edu" required />
+                  <div style="height:12px"></div>
+                  <label for="pwd">Password</label>
+                  <input id="pwd" type="password" placeholder="password (demo allowed)" />
+                  <div style="height:14px"></div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <button class="btn-primary" type="submit">Login</button>
+                    <button type="button" class="btn-ghost" onclick="fillDemo()">Use demo</button>
+                    <div style="margin-left:auto;color:var(--muted);font-size:13px;">Demo: demo@student.edu</div>
+                  </div>
+                </form>
+
+              </div>
+            </div>
+          </div>
+
+          <div style="width:360px;">
+            <div class="card" style="border:1px dashed #e6e9ef;background:linear-gradient(180deg,#f9fafb,#fff);">
+              <h2>Why this portal?</h2>
+              <ul style="margin-top:8px;color:var(--muted);font-size:14px;padding-left:18px;">
+                <li>Pick courses, preview weekly schedule, and detect conflicts.</li>
+                <li>Persist choices in localStorage so they survive refresh.</li>
+                <li>Beautiful, colourful login border for a friendly UI.</li>
+              </ul>
+              <div style="margin-top:12px;font-size:13px;color:var(--muted)">Tip: click "Use demo" to jump into the selector.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SELECTOR PAGE (hidden initially) -->
+      <div id="page-selector" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div>
+            <h2>Course Selection & Scheduler</h2>
+            <div style="font-size:13px;color:var(--muted);">Build your weekly timetable</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div id="signedInAs" style="font-size:14px;color:var(--muted)"></div>
+            <button class="btn-ghost" onclick="logout()">Logout</button>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div style="width:320px;" class="card">
+            <h3>Available Courses</h3>
+            <div class="course-list" id="courseList"></div>
+
+            <div style="margin-top:12px;">
+              <div>Selected: <span id="selectedCount">0</span> courses</div>
+              <div id="conflictStatus" style="margin-top:8px;" class="small-muted">No conflicts detected</div>
+              <div id="conflictList" style="margin-top:8px;color:#b91c1c;font-size:13px;"></div>
+            </div>
+
+            <div class="toolbar">
+              <button class="btn-primary" onclick="saveSchedule()">Save Schedule</button>
+              <button class="btn-ghost" onclick="clearSelection()">Clear</button>
+            </div>
+          </div>
+
+          <div style="flex:1;" class="schedule-wrap card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+              <h3 style="margin:0">Weekly Schedule Preview</h3>
+              <div class="legend" style="margin-left:auto;">
+                <div class="small-muted">Legend:</div>
+                <div class="swatch" style="background:var(--accent1)"></div>
+                <div style="font-size:13px;color:var(--muted)">Course color</div>
+              </div>
+            </div>
+
+            <div class="schedule-grid">
+              <div></div>
+              <div class="day-header">Mon</div>
+              <div class="day-header">Tue</div>
+              <div class="day-header">Wed</div>
+              <div class="day-header">Thu</div>
+              <div class="day-header">Fri</div>
+
+              <div class="time-cell" style="grid-row:2 / span 999;" id="timeAxis"></div>
+
+              <div style="grid-column:2 / span 5;">
+                <div class="grid-area" id="gridArea">
+                  <!-- hour lines and day columns added by JS -->
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px;color:var(--muted);font-size:13px;">
+              Tip: Dragging/removing is not supported in demo; toggle on the left to add or remove courses.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  // SAMPLE COURSES (same structure as React version)
+  const sampleCourses = [
+    { id: "CS101", name: "Intro to Computer Science", credits: 3, meets: [{day:"Mon",start:"09:00",end:"10:15"},{day:"Wed",start:"09:00",end:"10:15"}] },
+    { id: "MA102", name: "Calculus I", credits: 4, meets: [{day:"Tue",start:"10:30",end:"12:00"},{day:"Thu",start:"10:30",end:"12:00"}] },
+    { id: "PH201", name: "Physics", credits: 3, meets: [{day:"Mon",start:"11:00",end:"12:15"},{day:"Wed",start:"11:00",end:"12:15"}] },
+    { id: "EN110", name: "English", credits: 2, meets: [{day:"Fri",start:"09:00",end:"11:00"}] },
+    { id: "CS210", name: "Data Structures", credits: 3, meets: [{day:"Tue",start:"13:00",end:"14:30"},{day:"Thu",start:"13:00",end:"14:30"}] },
+  ];
+
+  const days = ["Mon","Tue","Wed","Thu","Fri"];
+  const startHour = 8, endHour = 18; // grid from 08:00 to 18:00
+
+  // state
+  let user = JSON.parse(localStorage.getItem('scs_user')) || null;
+  let selected = JSON.parse(localStorage.getItem('scs_selected')) || [];
+
+  // init
+  document.addEventListener('DOMContentLoaded', ()=>{
+    renderLoginState();
+    renderCourseList();
+    renderGrid();
+    renderSchedule();
+  });
+
+  function fillDemo(){
+    document.getElementById('email').value = "demo@student.edu";
+    document.getElementById('pwd').value = "demo";
+  }
+
+  function handleLogin(e){
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    if(!email){ alert('Please enter email'); return false; }
+    user = { email };
+    localStorage.setItem('scs_user', JSON.stringify(user));
+    // go to selector
+    renderLoginState();
+    return false;
+  }
+
+  function renderLoginState(){
+    if(user){
+      document.getElementById('page-login').style.display = 'none';
+      document.getElementById('page-selector').style.display = 'block';
+      document.getElementById('signedInAs').innerText = 'Signed in as ' + user.email;
+    } else {
+      document.getElementById('page-login').style.display = 'block';
+      document.getElementById('page-selector').style.display = 'none';
+    }
+  }
+
+  function logout(){
+    user = null;
+    localStorage.removeItem('scs_user');
+    renderLoginState();
+  }
+
+  // render course list
+  function renderCourseList(){
+    const el = document.getElementById('courseList');
+    el.innerHTML = '';
+    sampleCourses.forEach(c=>{
+      const wrapper = document.createElement('label');
+      wrapper.className = 'course-item';
+      const left = document.createElement('div');
+      left.className = 'course-meta';
+      left.innerHTML = `<div style="font-weight:700">${c.id} — ${c.name}</div><div class="small">${c.credits} credits • ${formatMeets(c.meets)}</div>`;
+      const right = document.createElement('div');
+      right.style.display = 'flex';
+      right.style.gap = '10px';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = selected.includes(c.id);
+      input.onchange = ()=> toggleCourse(c.id);
+      const swatch = document.createElement('div');
+      swatch.style.width = '18px'; swatch.style.height='18px'; swatch.style.borderRadius='6px'; swatch.style.background = colorFor(c.id);
+      right.appendChild(input); right.appendChild(swatch);
+      wrapper.appendChild(left); wrapper.appendChild(right);
+      el.appendChild(wrapper);
+    });
+    updateSelectedCount();
+  }
+
+  function toggleCourse(id){
+    if(selected.includes(id)) selected = selected.filter(x=>x!==id);
+    else selected.push(id);
+    localStorage.setItem('scs_selected', JSON.stringify(selected));
+    renderCourseList();
+    renderSchedule();
+  }
+
+  function clearSelection(){
+    if(!confirm('Clear all selected courses?')) return;
+    selected = [];
+    localStorage.removeItem('scs_selected');
+    renderCourseList();
+    renderSchedule();
+  }
+
+  function saveSchedule(){
+    localStorage.setItem('scs_selected', JSON.stringify(selected));
+    alert('Schedule saved (demo).');
+  }
+
+  function updateSelectedCount(){
+    document.getElementById('selectedCount').innerText = selected.length;
+  }
+
+  // schedule rendering
+  function renderGrid(){
+    const gridArea = document.getElementById('gridArea');
+    gridArea.innerHTML = '';
+
+    // hour lines
+    const totalHours = endHour - startHour;
+    for(let i=0;i<=totalHours;i++){
+      const y = (i/totalHours)*100;
+      const line = document.createElement('div');
+      line.className = 'hour-line';
+      line.style.top = y + '%';
+      gridArea.appendChild(line);
+    }
+
+    // day columns
+    const colWidth = 100/5;
+    days.forEach((d, idx)=>{
+      const col = document.createElement('div');
+      col.className = 'day-column';
+      col.style.left = (idx*(colWidth)) + '%';
+      col.style.width = colWidth + '%';
+      col.style.height = '100%';
+      col.style.position = 'absolute';
+      col.style.top = 0;
+      col.style.bottom = 0;
+      col.style.transform = `translateX(${idx*100}%)`;
+      col.dataset.day = d;
+      // we use transform to place; but simpler approach below: create child columns using left pixel math
+      // Instead of absolute grid layout complexity, we'll create 5 columns side-by-side using a CSS grid replacement:
+    });
+
+    // Simpler: create 5 container columns inside a wrapper
+    // Clear and fill using flex-like layout
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'grid';
+    wrapper.style.gridTemplateColumns = 'repeat(5,1fr)';
+    wrapper.style.height = '100%';
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = 0; wrapper.style.right = 0; wrapper.style.top = 0; wrapper.style.bottom = 0;
+    days.forEach(d=>{
+      const col = document.createElement('div');
+      col.style.position = 'relative';
+      col.style.borderLeft = '1px solid #f7fafc';
+      col.dataset.day = d;
+      wrapper.appendChild(col);
+    });
+    gridArea.appendChild(wrapper);
+
+    // left time axis labels
+    const timeAxis = document.getElementById('timeAxis');
+    timeAxis.innerHTML = '';
+    for(let h = startHour; h <= endHour; h++){
+      const row = document.createElement('div');
+      row.style.height = (520/(endHour-startHour)) + 'px';
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.justifyContent = 'flex-end';
+      row.style.paddingRight = '8px';
+      row.innerText = String(h).padStart(2,'0') + ':00';
+      timeAxis.appendChild(row);
+    }
+  }
+
+  function renderSchedule(){
+    updateSelectedCount();
+    const gridArea = document.getElementById('gridArea');
+    // find the wrapper grid (first child)
+    const wrapper = gridArea.querySelector('div');
+    if(!wrapper) return;
+    // clear existing blocks
+    wrapper.childNodes.forEach(col => col.innerHTML = '');
+
+    // compute conflicts
+    const conflicts = detectConflicts(selected);
+    const conflictStatus = document.getElementById('conflictStatus');
+    const conflictList = document.getElementById('conflictList');
+    if(conflicts.length){
+      conflictStatus.innerHTML = `<span class="status-bad">Conflicts detected: ${conflicts.length}</span>`;
+      conflictList.innerHTML = conflicts.map(c=>`${c[0]} conflicts with ${c[1]} on ${c[2]}`).join('<br>');
+    } else {
+      conflictStatus.innerHTML = `<span class="status-ok">No conflicts</span>`;
+      conflictList.innerHTML = '';
+    }
+
+    // place selected course blocks
+    selected.forEach(id=>{
+      const course = sampleCourses.find(x=>x.id===id);
+      if(!course) return;
+      course.meets.forEach(m=>{
+        const colIndex = days.indexOf(m.day);
+        if(colIndex < 0) return;
+        const col = wrapper.childNodes[colIndex];
+        // compute top and height percent
+        const start = timeToMinutes(m.start);
+        const end = timeToMinutes(m.end);
+        const topPct = ((start - startHour*60) / ((endHour-startHour)*60)) * 100;
+        const heightPct = ((end - start) / ((endHour-startHour)*60)) * 100;
+        // create block
+        const block = document.createElement('div');
+        block.className = 'course-block';
+        block.style.top = topPct + '%';
+        block.style.height = heightPct + '%';
+        block.style.background = colorFor(id);
+        block.innerHTML = `<div style="font-weight:700">${id}</div><div style="font-size:12px">${course.name}</div><div style="font-size:12px;margin-top:6px">${m.start} - ${m.end}</div>`;
+        col.appendChild(block);
+      });
+    });
+  }
+
+  // helpers
+  function timeToMinutes(t){
+    const [hh,mm] = t.split(':').map(Number);
+    return hh*60 + mm;
+  }
+  function formatMeets(meets){
+    return meets.map(m=>`${m.day} ${m.start}-${m.end}`).join(', ');
+  }
+  function hashCode(s){
+    let h=0; for(let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i))|0; return Math.abs(h);
+  }
+  function colorFor(id){
+    const set = ['var(--accent1)','var(--accent2)','var(--accent3)','var(--accent4)','var(--accent5)','var(--accent6)'];
+    const idx = hashCode(id) % set.length;
+    // resolve CSS variable to actual color value:
+    const tmp = document.createElement('div'); tmp.style.display='none'; document.body.appendChild(tmp);
+    tmp.style.setProperty('background', `var(--accent${(idx+1)})`);
+    const val = getComputedStyle(document.documentElement).getPropertyValue(`--accent${(idx+1)}`).trim() || ['#7c3aed','#ef4444','#0ea5e9','#f59e0b','#10b981','#ec4899'][idx];
+    tmp.remove();
+    return val;
+  }
+
+  function detectConflicts(selectedIds){
+    const events = [];
+    selectedIds.forEach(id=>{
+      const c = sampleCourses.find(x=>x.id===id);
+      if(!c) return;
+      c.meets.forEach(m=> events.push({courseId:id, day:m.day, start:timeToMinutes(m.start), end:timeToMinutes(m.end)}));
+    });
+    const conflicts = [];
+    days.forEach(d=>{
+      const evs = events.filter(e=>e.day===d).sort((a,b)=>a.start-b.start);
+      for(let i=0;i<evs.length;i++){
+        for(let j=i+1;j<evs.length;j++){
+          if(evs[j].start < evs[i].end){
+            conflicts.push([evs[i].courseId, evs[j].courseId, d]);
+          }
+        }
+      }
+    });
+    // remove duplicates pairs (unordered)
+    const uniq = [];
+    const seen = new Set();
+    conflicts.forEach(c=>{
+      const key = [c[0],c[1],c[2]].join('|');
+      const key2 = [c[1],c[0],c[2]].join('|');
+      if(!seen.has(key) && !seen.has(key2)){
+        uniq.push(c);
+        seen.add(key);
+      }
+    });
+    return uniq;
+  }
+
+  // If user already signed in, ensure page shows selector
+  // Also load saved selected courses into checkboxes and schedule
+  (function autoLoadSaved(){
+    // apply any saved selection to UI (rendered on DOMContentLoaded)
+  })();
+
+  // expose some functions for console debug
+  window.toggleCourse = toggleCourse;
+  window.renderSchedule = renderSchedule;
+  window.clearSelection = clearSelection;
+  window.saveSchedule = saveSchedule;
+  window.logout = logout;
+</script>
+</body>
+</html>
